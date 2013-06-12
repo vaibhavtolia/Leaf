@@ -1,10 +1,9 @@
 var sqlite3 = require('sqlite3').verbose(),
-	express = require('express');
+	express = require('express'),
+	api = require('./controller/api.controller.js');
 
 var db = new sqlite3.Database('../database/maindb');
 var app = new express();
-
-var API_KEYS = ['221b368d7f5f597867f525971f28ff75','b3be6b55584e1a4e13928e8fdb6e1e5f','dec2abf5473e676042232b6786415d2c'];
 
 app.listen(3000)
 
@@ -14,6 +13,10 @@ app.use(app.router);
 app.use(logErrors);
 app.use(clientErrorHandler);
 app.use(errorHandler);
+
+/**************************
+initialization function
+**************************/
 
 
 /***********************
@@ -30,97 +33,34 @@ app.get('/sessions',renderSessionsQuery);
 Route Handling functions
 *****************************/
 function renderUsersQuery(req,res){
-	if(isValidAPIKey(req)){
-		if( req.query.id != null && req.query.id != undefined ){
-			var sql = "SELECT * FROM users WHERE id = $id";
-			db.all(sql,{ $id : req.query.id },function(err, row){
-				if( err == null && row.length > 0 ){
-					res.json(200,apiSuccessResponse(row));
-				}
-				else{
-					console.log(err);
-					res.json(200,apiErrorResponse(err));
-				}
-			});
-		}
-		else{
-			res.json(200, invalidParamsError());
-		}
-	}
-	else{
-		res.json(200, invalidAPIKeyError());
-	}
+	api.renderUsersQuery(req,function(data){
+		res.json(200,data);
+	});
 }
 
 function renderHubsQuery(req,res){
-	
+	var a = api.renderHubsQuery(req,function(data){
+		res.json(200,data);
+	});
 }
 
 function renderDevicesQuery(req,res){
-	
+	var a = api.renderDevicesQuery(req,function(data){
+		res.json(200,data);
+	});
 }
 
 function renderRoomsQuery(req,res){
-	
+	var a = api.renderRoomsQuery(req,function(data){
+		res.json(200,data);
+	});
 }
 
 function renderSessionsQuery(req,res){
-	
+	var a = api.renderSessionsQuery(req,function(data){
+		res.json(200,data);
+	});
 }
-
-
-/************************
-Helper Functions
-************************/
-
-function isValidAPIKey(req){
-	var key = req.query.key;
-	if( key != null && key != undefined){
-		if( API_KEYS.indexOf(key) != -1 ){
-			return true;
-		}
-		else{
-			return false;
-		}		
-	}
-	else{
-		return false;
-	}
-}
-
-function invalidAPIKeyError(){
-	var response = {
-		"status" : "INVALID_KEY",
-		"response" : ""
-	}
-	return response;
-}
-
-function invalidParamsError(){
-	var response = {
-		"status" : "INVALID_PARAMETERS",
-		"response" : ""
-	}
-	return response;
-}
-
-function apiErrorResponse(err){
-	var response = {
-		"status" : "ERROR",
-		"response" : err
-	}
-	return response;
-}
-
-function apiSuccessResponse(res){
-	var response = {
-		"status" : "OK",
-		"response" : res
-	}
-	return response;
-}
-
-
 /***********************
 Error and Exception handling functions
 to be used by default by express
