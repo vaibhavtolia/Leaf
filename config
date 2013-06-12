@@ -1,7 +1,7 @@
 {
 	"devices" : {
 		"data_feed" : {
-			"port" : "1001"
+			"port" : 1001
 		},
 		"action_response" : {
 
@@ -11,6 +11,8 @@
 
 	},
 	"middleware" : {
-
+		"api" : {
+			"port" : 3000
+		}
 	}
 }

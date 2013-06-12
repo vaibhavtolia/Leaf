@@ -1,4 +1,5 @@
 var query_string = require('querystring'),
+sqlite3 = require('sqlite3').verbose(),
 	 io = require('socket.io-client');
 
 socket = io.connect('localhost', {

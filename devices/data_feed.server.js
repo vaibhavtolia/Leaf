@@ -1,4 +1,5 @@
-var io = require('socket.io').listen(2001);
+var sqlite3 = require('sqlite3').verbose(),
+	io = require('socket.io').listen(2001);
 
 io.sockets.on('connection', function (socket) {
 	
@@ -7,7 +8,11 @@ io.sockets.on('connection', function (socket) {
 		socket.emit('data-feed',data_string);
 	},5000);
 
+	socket.on('disconnect', function () {
+		clearInterval(tweets);
+	});
 });
+
 
 function generateDeviceData(){
 	var time = 5*60;
