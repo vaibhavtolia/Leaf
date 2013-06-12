@@ -1,0 +1,16 @@
+{
+	"devices" : {
+		"data_feed" : {
+			"port" : "1001"
+		},
+		"action_response" : {
+
+		}
+	},
+	"clients" :{
+
+	},
+	"middleware" : {
+
+	}
+}

@@ -1,0 +1,6 @@
+Directory struture - 
+
+	- Clients : Browser apps for controlling things
+	- Middleware : Middleware logic to route controls and actions
+	- Devices : Servers to imitate device behavior
+	- Database : Store of all databases (sqlite3)
