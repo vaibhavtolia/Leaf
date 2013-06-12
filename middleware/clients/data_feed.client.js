@@ -1,6 +1,7 @@
 var query_string = require('querystring'),
 sqlite3 = require('sqlite3').verbose(),
-	 io = require('socket.io-client');
+	 io = require('socket.io-client'),
+	 api = require('../api/controller/api.controller.js');
 
 socket = io.connect('localhost', {
     port: 2001
@@ -16,5 +17,13 @@ socket.on('data-feed',function(data){
 
 function storeConsumptionData(data){
 	var feed_data = query_string.parse(data);
-	console.log(feed_data);
+	//console.log(feed_data);
+	api.addSessionData(feed_data,function(data){
+		if(data == true){
+			console.log('update successful')
+		}
+		else{
+			console.log(data);
+		}
+	})
 }

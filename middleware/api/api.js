@@ -1,8 +1,6 @@
-var sqlite3 = require('sqlite3').verbose(),
-	express = require('express'),
+var express = require('express'),
 	api = require('./controller/api.controller.js');
 
-var db = new sqlite3.Database('../database/maindb');
 var app = new express();
 
 app.listen(3000)
@@ -28,36 +26,37 @@ app.get('/devices',renderDevicesQuery);
 app.get('/rooms',renderRoomsQuery);
 app.get('/sessions',renderSessionsQuery);
 
+//app.post('/sessions',addSessionData);
 
 /*****************************
 Route Handling functions
 *****************************/
 function renderUsersQuery(req,res){
-	api.renderUsersQuery(req,function(data){
+	api.renderUsersQuery(req.query,function(data){
 		res.json(200,data);
 	});
 }
 
 function renderHubsQuery(req,res){
-	var a = api.renderHubsQuery(req,function(data){
+	var a = api.renderHubsQuery(req.query,function(data){
 		res.json(200,data);
 	});
 }
 
 function renderDevicesQuery(req,res){
-	var a = api.renderDevicesQuery(req,function(data){
+	var a = api.renderDevicesQuery(req.query,function(data){
 		res.json(200,data);
 	});
 }
 
 function renderRoomsQuery(req,res){
-	var a = api.renderRoomsQuery(req,function(data){
+	var a = api.renderRoomsQuery(req.query,function(data){
 		res.json(200,data);
 	});
 }
 
 function renderSessionsQuery(req,res){
-	var a = api.renderSessionsQuery(req,function(data){
+	var a = api.renderSessionsQuery(req.query,function(data){
 		res.json(200,data);
 	});
 }
