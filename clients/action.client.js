@@ -11,7 +11,7 @@ socket.on('connect', function () {
 
 	var interval = setInterval(function(){
 		generateDeviceAction(sendAction);
-	},3000);
+	},7000);
 });
 
 socket.on('action-acknowledgement',function(data){

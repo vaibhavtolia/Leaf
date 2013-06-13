@@ -138,7 +138,7 @@ exports.addSessionEnergyData = function(query,callback){
 exports.addDeviceSession = function(query,callback){
 	if(isValidAPIKey(query)){
 		if( query.client_id != null && query.action != null && query.device_id != null ){
-			var sql = "SELECT id FROM sessions WHERE device_id = $device_id AND timestamp_action_end != $null";
+			var sql = "SELECT id FROM sessions WHERE device_id = $device_id AND timestamp_action_end == $null";
 			var params = { $device_id : query.device_id, $null : 'NULL' }
 			runDbQuery(sql,params, function(data){
 				if(data.status != "OK"){
@@ -185,8 +185,14 @@ exports.updateDeviceStatus = function(query,callback){
 			logSqlQuery(sql,params);
 			db.run(sql,params,function(err){
 				if(err == null && this.changes > 0){
-					var sql = "UPDATE sessions SET energy_consumption = $energy_consumption, time = $time, status = $status WHERE id = $session_id";
-					var params = { $energy_consumption : query.energy_consumption, $time : query.time, $status : query.status, $session_id : query.session_id };
+					if(query.status == 1 && query.device_status != 0 ){
+						var sql = "UPDATE sessions SET energy_consumption = energy_consumption + $energy_consumption, time = time + $time, status = $status WHERE id = $session_id";
+						var params = { $energy_consumption : query.energy_consumption, $time : query.time, $status : query.status, $session_id : query.session_id };
+					}
+					else{
+						var sql = "UPDATE sessions SET timestamp_action_end = $end_ts, energy_consumption = energy_consumption + $energy_consumption, time = time + $time, status = $status WHERE id = $session_id";
+						var params = {$end_ts : new Date().getTime() ,$energy_consumption : query.energy_consumption, $time : query.time, $status : query.status, $session_id : query.session_id}
+					}
 					logSqlQuery(sql,params);
 					db.run(sql,params,function(err){
 						if(err == null && this.changes > 0){
@@ -296,7 +302,7 @@ function logSqlQuery(sql,params){
 			console.log('there occured error in writing to file');
 		}
 		else{
-			console.log('successfully written to file');
+			//console.log('successfully written to file');
 		}
 	})
 }

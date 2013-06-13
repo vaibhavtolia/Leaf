@@ -17,8 +17,8 @@ io.sockets.on('connection', function (socket) {
 			api.addDeviceSession(parsedData,function(data){
 				if(data.status == "OK"){
 					var session_id = data.session_id;
+					console.log(session_id);
 					var action = query_string.stringify(parsedData.action);
-					console.log(action);
 					var msg = create_AT_message( action , parsedData.device_id, parsedData.client_id, session_id);//convert client to trigerrer
 					socket.broadcast.emit('action-triggered',msg);
 					console.log("Sent action to device: ", parsedData.device_id);
@@ -46,6 +46,10 @@ io.sockets.on('connection', function (socket) {
 		}
 	});
 
+	socket.on('data-feed',function(data){
+		storeConsumptionData(data);
+	})
+
 });
 
 
@@ -54,7 +58,15 @@ function create_AT_message(action,device,triggerer,session){
 	return data;
 }
 
-function actionOccured(data){
-	//eventhandler
-	return;
+function storeConsumptionData(data){
+	var feed_data = query_string.parse(data);
+	//console.log(feed_data);
+	api.addSessionEnergyData(feed_data,function(data){
+		if(data == true){
+			console.log('update successful')
+		}
+		else{
+			console.log(data);
+		}
+	})
 }
