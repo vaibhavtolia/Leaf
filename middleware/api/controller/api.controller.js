@@ -1,4 +1,6 @@
 var sqlite3 = require('sqlite3').verbose(),
+	query_string = require('querystring'),
+	crypto = require('crypto'),
 	fs = require('fs');
 var db = new sqlite3.Database('/home/vaibhav/leaf_app/database/maindb');
 
@@ -107,7 +109,7 @@ exports.renderSessionsQuery = function (query,callback){
 	}
 }
 
-exports.addSessionData = function(query,callback){
+exports.addSessionEnergyData = function(query,callback){
 	if(isValidAPIKey(query)){
 		if( query.session_id != null && query.energy_consumption != null && query.time != null ){
 			var sql = "UPDATE sessions SET energy_consumption = energy_consumption+$consumption, time = time+$time  WHERE id = $id";
@@ -133,6 +135,88 @@ exports.addSessionData = function(query,callback){
 	}
 }
 
+exports.addDeviceSession = function(query,callback){
+	if(isValidAPIKey(query)){
+		if( query.client_id != null && query.action != null && query.device_id != null ){
+			var sql = "SELECT id FROM sessions WHERE device_id = $device_id AND timestamp_action_end != $null";
+			var params = { $device_id : query.device_id, $null : 'NULL' }
+			runDbQuery(sql,params, function(data){
+				if(data.status != "OK"){
+					var session_id = unique_session_id(query_string.stringify(query));
+					var action =  query_string.stringify(query.action);
+					//console.log("action : ",action);
+					var sql = "INSERT INTO sessions (id ,device_id ,action ,timestamp_action_start ,timestamp_action_end ,energy_consumption ,time ,triggered_by ,status) VALUES ($session_id, $device_id, $action, $current_time, $null, $zero, $zero, $client_id, $zero)";
+					var params = { $session_id : session_id, $device_id : query.device_id, $action : action, $current_time : new Date().getTime() , $null : 'NULL', $zero : 0, $client_id : query.client_id }
+					db.run(sql,params,function(err){
+						if(err == null && this.changes > 0){
+							var response = {'status' : "OK", "session_id" : session_id}
+							callback && callback(response);
+						}
+						else{
+							var response = {"status" : "ERROR", "msg" : err};
+							callback && callback(response);
+						}
+					})
+				}
+				else{
+					console.log(data);
+					var session_id = data.session_id;
+					var response = {"status" : "OK", "session_id" : session_id};
+					callback && callback(response);
+				}
+			})		
+		}
+		else{
+			response = invalidParamsError();
+			callback && callback(response);
+		}
+	}
+	else{
+		response = invalidAPIKeyError();
+		callback && callback(response);
+	}
+}
+
+exports.updateDeviceStatus = function(query,callback){
+	if(isValidAPIKey(query)){
+		if( query.session_id != null && query.energy_consumption != null && query.time != null && query.status != null && query.client_id != null && query.device_id != null && query.device_status != null ){
+			var sql = "UPDATE devices SET status = $status WHERE id = $device_id";
+			var params = { $status : query.device_status, $device_id : query.device_id };
+			logSqlQuery(sql,params);
+			db.run(sql,params,function(err){
+				if(err == null && this.changes > 0){
+					var sql = "UPDATE sessions SET energy_consumption = $energy_consumption, time = $time, status = $status WHERE id = $session_id";
+					var params = { $energy_consumption : query.energy_consumption, $time : query.time, $status : query.status, $session_id : query.session_id };
+					logSqlQuery(sql,params);
+					db.run(sql,params,function(err){
+						if(err == null && this.changes > 0){
+							var response = {"status" : "OK"};
+							callback && callback(response);
+						}
+						else{
+							var response = {"status" : "ERROR", "msg" : err };
+							callback && callback(response);
+
+						}
+					});
+				}
+				else{
+					var response = {"status" : "ERROR", "msg" : err };
+					callback && callback(response);
+				}
+			})
+		}
+		else{
+			response = invalidParamsError();
+			callback && callback(response);
+		}
+	}
+	else{
+		response = invalidAPIKeyError();
+		callback && callback(response);
+	}
+}
+
 /************************
 Database Functions
 ************************/
@@ -144,7 +228,7 @@ function runDbQuery(sql,params,callback){
 			callback && callback(data);
 		}
 		else{
-			console.log(err);
+			//console.log(err);
 			var data = apiErrorResponse(err);
 			callback && callback(data);
 		}
@@ -215,4 +299,12 @@ function logSqlQuery(sql,params){
 			console.log('successfully written to file');
 		}
 	})
+}
+
+function unique_session_id(data){
+	var ts = new Date().getTime().toString(); 
+	var s = ts+data;
+	var session_id = crypto.createHash('md5').update(s).digest("hex");
+	//console.log(session_id);
+	return session_id;
 }

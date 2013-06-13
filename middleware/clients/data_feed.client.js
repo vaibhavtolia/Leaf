@@ -1,7 +1,7 @@
 var query_string = require('querystring'),
-sqlite3 = require('sqlite3').verbose(),
-	 io = require('socket.io-client'),
-	 api = require('../api/controller/api.controller.js');
+	sqlite3 = require('sqlite3').verbose(),
+	io = require('socket.io-client'),
+	api = require('../api/controller/api.controller.js');
 
 socket = io.connect('localhost', {
     port: 2001
