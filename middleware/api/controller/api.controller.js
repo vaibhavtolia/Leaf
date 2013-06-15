@@ -124,6 +124,26 @@ exports.renderSessionsQuery = function (query,callback){
 	}
 }
 
+exports.renderSessionTimeQuery = function (query,callback){
+	if(isValidAPIKey(query)){
+		if( query.device_id != null && query.today != undefined ){
+			var sql = "SELECT * FROM sessions WHERE deviceid = $device_id AND timestamp_action_start > $today";
+			var params = { $device_id : query.id, $today : query.today };
+			runDbQuery(sql,params,function(data){
+				callback && callback(data);
+			});
+		}
+		else{
+			response = invalidParamsError();
+			callback && callback(response);
+		}
+	}
+	else{
+		response = invalidAPIKeyError();
+		callback && callback(response);
+	}
+}
+
 exports.renderEventsQuery = function (query,callback){
 	if(isValidAPIKey(query)){
 		if( query.id != null && query.id != undefined ){

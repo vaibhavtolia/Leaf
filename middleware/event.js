@@ -106,10 +106,14 @@ function delete_cron(callback_id){
 
 
 function rate_of_consumption2(device_id_array,size,callback,params,net){
-	if(size == 0) callback(params,net);
+	if(size == 0) 
+	{
+		callback(params,net);
+		return;
+	}
 	sum = 0;
+	rate_of_consumption2(device_id_array,size-1,callback,params,1);
 	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
-	return sum;
 
 }
 
@@ -138,7 +142,7 @@ function eventhandler(event){
 	api.renderAllSemieventQuery(query,function(rows){
 		size = rows.length;
 		for(i = 0;i<size; i++){
-			if((rows[i].device_id == device)||((rows[i].device_id == "")&&(rows[i].room_id == room))||( (rows[i].device_id == "")&&(rows[i].room_id == "-1") )){
+			if((rows[i].device_id == device)||((rows[i].device_id == "-1")&&(rows[i].room_id == room))||( (rows[i].device_id == "")&&(rows[i].room_id == "-1") )){
 			    ComputeAndStoreExpTime(event,rows[i].clause_id);
 			}
 		}
@@ -157,32 +161,84 @@ function positive(str){
 
 function time_run_today2(device_id_array,size,callback,net,params){
 //obtain from sessions
-	if(size == 0) callback(params,net);
-	sum = 0;
-	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
-	return sum;
+	if(size == 0) {
+		callback(params,net);
+		return;
+	}
+	now = new Date().getTime();
+	var date = new Date(now*1000);
+	var hours = date.getHours();
+	var minutes = date.getMinutes();
+	var seconds = date.getSeconds();
+	today = now - 3600*hours - 60*minutes - seconds;
 
-return 0;
+	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
+	query = {
+		"device_id"		:	device_id_array[size]-1,
+		"today"			:	today,
+		"key"			:	"221b368d7f5f597867f525971f28ff75"
+	};
+	api.renderSessionTimeQuery(query ,function(rows){
+// AND timestamp_action_start > '" + today + "'
+		time = net;
+		size2 = rows.length;
+		for(i = 0;i< size2; i++){
+			if(rows[i].timestamp_action_end != "")
+			time = time + rows[i].timestamp_action_end - rows[i].timestamp_action_start;
+		}
+		if(rows[size2-1].timestamp_action_end == ""){
+			now = new Date().getTime();
+			time = time + now - rows[i].timestamp_action_start;
+		}
+		time_run_today2(device_id_array,size-1,callback,time,params);
+	});
 }
 
 function energy_used_today2(device_id_array,size,callback,net,params){
 // obtain from sessions
 	if(size == 0) callback(params,net);
-	sum = 0;
+	now = new Date().getTime();
+	var date = new Date(now*1000);
+	var hours = date.getHours();
+	var minutes = date.getMinutes();
+	var seconds = date.getSeconds();
+	today = now - 3600*hours - 60*minutes - seconds;
 	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
-	return sum;
-
-return 0;
+	query = {
+		"device_id"		:	device_id_array[size]-1,
+		"today"			:	today,
+		"key"			:	"221b368d7f5f597867f525971f28ff75"
+	};
+	api.renderSessionTimeQuery(query ,function(rows){
+		energy = net;
+		size2 = rows.length;
+		for(i = 0;i< size2; i++){
+			energy = energy + rows[i].energy;
+		}
+		energy_run_today2(device_id_array,size-1,callback,time,params);
+	});
 }
 
 function energy_used_in_last_session(device_id_array,size,callback,net,params){
 	//obtain from sessions
 	if(size == 0) callback(params,net);
-	sum = 0;
 	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
-	return sum;
-	return 0;
+	query = {
+		"device_id"		:	device_id_array[size]-1,
+		"today"			:	0,
+		"key"			:	"221b368d7f5f597867f525971f28ff75"
+	};
+	api.renderSessionTimeQuery(query ,function(rows){
+		energy = net;
+		size2 = rows.length;
+		for(i = 0;i< size2; i++){
+			energy = energy + rows[i].energy;
+		}
+		energy_run_today2(device_id_array,size-1,callback,time,params);
+	});
+
 }
+
 
 function check_semi_event(clause_id){
 	//TBD
@@ -233,29 +289,29 @@ function createArrayAndComputeStoreTime(row,clause_id,event){
 
 		index  = 0;
 		for(i = 0; i< size; i++){
-			if(rows.status == "1"){
-				if(row.room == ""){
+			if(rows[i].status == "1"){
+				if(row.room_id == ""){
 					arrayOfDevices[0] = rows.device;
 				}
-				else if((row.device == "-1")&&(row.room == "-1")){
-						arrayOfDevices[index] = rows[i].device;
+				else if((row.device_id == "-1")&&(row.room_id == "-1")){
+						arrayOfDevices[index] = rows[i].id;
 						index = index + 1;
 				}
-				else if((row.device == "-1")&&(row.room != "")){
-					if(rows[i].room == row.room){
-						arrayOfDevices[index] = rows[i].device;
+				else if((row.device_id == "-1")&&(row.room_id != "")){
+					if(rows[i].room_id == row.room_id){
+						arrayOfDevices[index] = rows[i].id;
 						index = index + 1;
 					}
 				}
-				else if((row.device != "")&&(row.room == "-1")){
+				else if((row.device_id != "")&&(row.room_id == "-1")){
 					if(rows[i].type == type){
-						arrayOfDevices[index] = rows[i].device;
+						arrayOfDevices[index] = rows[i].id;
 						index = index + 1;
 					}
 				}
-				else if((row.device != "")&&(row.room != "")){
-					if((rows[i].type == type)&&(rows[i].room == row.room)){
-						arrayOfDevices[index] = rows[i].device;
+				else if((row.device_id != "")&&(row.room_id != "")){
+					if((rows[i].type == type)&&(rows[i].room_id == row.room_id)){
+						arrayOfDevices[index] = rows[i].id;
 						index = index + 1;
 					}			
 				}
@@ -293,17 +349,18 @@ function TimeOrEnergyCompute(params,rate){
 		"row"	:	params.row,
 		"event"	:	params.event,
 		"clause_id"	:	params.clause_id,
-		"rate"	:	rate
+		"rate"	:	rate,
+		"count"	:	count
 	}
 	if(time!=""){
-		time_run_today2(params.array_of_devices,count,computeExpTimeAfterSessions, 0, newparams);	
+		time_run_today2(params.array,count,computeExpTimeAfterSessions, 0, newparams);	
 	}
 	else{
 		if(timetype == "c"){
-			energy_used_today2(params.array_of_devices,count,computeExpTimeAfterSessions, 0, newparams);
+			energy_used_today2(params.array,count,computeExpTimeAfterSessions, 0, newparams);
 		}
 		else{
-			energy_used_in_last_session(params.array_of_devices,count,computeExpTimeAfterSessions, 0, newparams);
+			energy_used_in_last_session(params.array,count,computeExpTimeAfterSessions, 0, newparams);
 		}
 	}
 }
@@ -315,6 +372,7 @@ function computeExpTimeAfterSessions(params,net){
 	timetype = params.row.timetype;
 	energy = params.row.energy;
 	time = params.row.time;
+	count = params.count;
 	
 	eventParsed = query_string.parse(params.event);
 	status = eventParsed.status
