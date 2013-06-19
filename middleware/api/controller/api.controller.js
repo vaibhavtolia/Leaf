@@ -407,9 +407,9 @@ exports.InsertSemievent = function(query,callback){
 
 exports.InsertEvent = function(query,callback){
 	if(isValidAPIKey(query)){
-		if( query.eventName!=null && query.action!=null && query.exp_time != null && query.event_id != null){
-			var sql = "Insert into semievents VALUES ($eventName,$action,$exp_time,$event_id)";
-			var params = { $eventName : query.eventName, $action : query.action, $exp_time : query.exp_time, $room : query.room};
+		if( query.eventName!=null && query.action!=null && query.exp_time != null && query.event_id != null && query.callback_id != null){
+			var sql = "Insert into semievents VALUES ($eventName,$action,$exp_time,$event_id,$callback_id)";
+			var params = { $eventName : query.eventName, $action : query.action, $exp_time : query.exp_time, $event_id : query.event_id,query.callback_id};
 			logSqlQuery(sql,params);
 			db.run(sql,params,function(err){
 				if(err == null && this.changes > 0){
@@ -431,7 +431,31 @@ exports.InsertEvent = function(query,callback){
 	}
 }
 
-
+exports.updateEventTimeout = function(query,callback){
+	if(isValidAPIKey(query)){
+		if( query.event_id != null && query.callback_id != null){
+			var sql = "UPDATE events SET callback_id = $callback_id WHERE event_id = $event_id";
+			var params = {$event_id : query.event_id,query.callback_id};
+			logSqlQuery(sql,params);
+			db.run(sql,params,function(err){
+				if(err == null && this.changes > 0){
+					callback && callback(true);
+				}
+				else{
+					callback && callback(err);
+				}
+			})
+		}
+		else{
+			response = invalidParamsError();
+			callback && callback(response);
+		}
+	}
+	else{
+		response = invalidAPIKeyError();
+		callback && callback(response);
+	}
+}
 
 /************************
 Database Functions

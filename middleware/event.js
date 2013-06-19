@@ -27,8 +27,8 @@ exp_time (max of all in prev table)
 
 
 var api = require('./api/controller/api.controller.js');
-//var events = require('events');
-//var eventEmitter = new events.eventEmitter();
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
 var query_string = require('querystring');
 
 var INF = -1;//infinity
@@ -77,13 +77,13 @@ function create_event(event){
 			query = {
 				"name"		:	eventName,
 				"action"	:	action,
-				
+				"callback_id":	"",
 				"exp_time"	:	exp_time,
 				"event_id"	:	event_id,
 				"key"		:	"221b368d7f5f597867f525971f28ff75"
 			};
 			api.InsertEvent(query,function(){
-				//eventEmitter.on('event'+event_id,actionParse(event_id,action));
+				eventEmitter.on('event'+event_id,actionParse(event_id,action));
 			});
 	});
 //Create node event and its associated function actionParse(eventId, action)
@@ -112,9 +112,14 @@ function rate_of_consumption2(device_id_array,size,callback,params,net){
 		return;
 	}
 	sum = 0;
-	rate_of_consumption2(device_id_array,size-1,callback,params,1);
-	//do the querying and use energy_used_today2(device_id_array,size-1,callback,net,params) as callback
-
+	query = {
+		"id"		:	device_id_array[size - 1],
+		"key"		:	"221b368d7f5f597867f525971f28ff75"
+	};
+	api.renderDevicesQuery(query,function(err,row){
+		net = net + parseInt(row.energyrate);
+		rate_of_consumption2(device_id_array,size-1,callback,params,net);
+	});
 }
 
 function ComputeAndStoreExpTime(event,clause_id){
@@ -183,12 +188,13 @@ function time_run_today2(device_id_array,size,callback,net,params){
 		time = net;
 		size2 = rows.length;
 		for(i = 0;i< size2; i++){
-			if(rows[i].timestamp_action_end != "")
-			time = time + rows[i].timestamp_action_end - rows[i].timestamp_action_start;
-		}
-		if(rows[size2-1].timestamp_action_end == ""){
-			now = new Date().getTime();
-			time = time + now - rows[i].timestamp_action_start;
+			if(rows[i].timestamp_action_end != "NULL"){
+				time = time + rows[i].timestamp_action_end - rows[i].timestamp_action_start;
+			}
+			else{
+				now = new Date().getTime();
+				time = time + now - rows[i].timestamp_action_start;
+			}
 		}
 		time_run_today2(device_id_array,size-1,callback,time,params);
 	});
@@ -266,12 +272,28 @@ function periodicCheck(){
 			exptime = setOfEvents[i].exp_time;
 			var delay = parseInt(exptime) - new Date().getTime();
 			if(delay < periodForCheck){
-				var timeout = setTimeout(function(){emit('event'+setOfEvents[i].event_id);},delay);
+				var timeout = setTimeout(function(){
+					//eventEmitter.emit('event'+setOfEvents[i].event_id);},delay);
+				query = {
+					"callback_id":	timeout,
+					"event_id"	:	setOfEvents[i].event_id,
+					"key"	:	"221b368d7f5f597867f525971f28ff75"
+				};
+				api.updateEventTimeout(query,function(){});
 			}
+			
+			
 		}
 	});
 }
 
+function runPeriodicCheck(){
+	setInterval(function(){
+		periodicCheck();
+	},periodForCheck);
+}
+
+runPeriodicCheck();
 
 function createArrayAndComputeStoreTime(row,clause_id,event){
 	var query = {
@@ -471,7 +493,26 @@ function storeExpTimeEvent(clause_id,exptime){
 				"exp_time"	:	exptime,
 				"key"		:	"221b368d7f5f597867f525971f28ff75"
 			};
-			api.updateExpTimeEvent(query,function(){});
+			api.updateExpTimeEvent(query,function(){
+				if (exptime == INF){
+					query = {
+						"id"		:	event_id,
+						"key"		:	"221b368d7f5f597867f525971f28ff75"
+					};
+					api.renderEventsQuery(query,function(err,row){
+						callback = row.callback_id;
+						if(callback_id != ""){
+							clearTimeout(callback);
+							query = {
+								"event_id"		:	event_id,
+								"callback_id"	:	"",
+								"key"		:	"221b368d7f5f597867f525971f28ff75"
+							};
+							api.updateEventTimeout(query,function(){});
+						}
+					});
+				}
+			});
 		});
 	});
 }
